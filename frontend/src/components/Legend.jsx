@@ -1,28 +1,24 @@
-/**
- * Legend — compact color key for the seat map
- */
 export default function Legend() {
   const items = [
-    { color: '#22c55e', bg: 'rgba(34,197,94,0.13)',   label: 'Available'  },
-    { color: '#ef4444', bg: 'rgba(239,68,68,0.13)',   label: 'Booked'     },
-    { color: '#3b82f6', bg: 'rgba(59,130,246,0.13)',  label: 'Floater'    },
-    { color: '#6b7280', bg: 'rgba(75,85,99,0.2)',     label: 'Blocked'    },
-    { color: '#6366f1', bg: 'rgba(99,102,241,0.22)',  label: 'Your Seat'  },
+    { color: '#2a9d5c', bg: 'rgba(42,157,92,0.1)',   border: 'rgba(42,157,92,0.3)',   label: 'Available' },
+    { color: '#e05252', bg: 'rgba(224,82,82,0.09)',  border: 'rgba(224,82,82,0.28)',  label: 'Booked'    },
+    { color: '#1a9e92', bg: 'rgba(46,196,182,0.1)',  border: 'rgba(46,196,182,0.3)',  label: 'Floater'   },
+    { color: '#9ca3af', bg: 'rgba(156,163,175,0.12)',border: 'rgba(156,163,175,0.28)',label: 'Blocked'   },
+    { color: '#f4845f', bg: 'rgba(244,132,95,0.12)', border: 'rgba(244,132,95,0.32)', label: 'Your Seat' },
   ];
 
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-1.5 items-center">
-      {items.map(({ color, bg, label }) => (
-        <div key={label} className="flex items-center gap-1.5">
-          <div
-            className="w-3.5 h-3.5 rounded-sm shrink-0"
-            style={{
-              background: bg,
-              border: `1.5px solid ${color}`,
-              boxShadow: `0 0 6px ${color}40`,
-            }}
-          />
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', alignItems: 'center' }}>
+      {items.map(({ color, bg, border, label }) => (
+        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div style={{
+            width: 13, height: 13, borderRadius: 4, flexShrink: 0,
+            background: bg,
+            border: `1.5px solid ${border}`,
+          }} />
+          <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            {label}
+          </span>
         </div>
       ))}
     </div>

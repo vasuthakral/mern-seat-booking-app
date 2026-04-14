@@ -1,6 +1,3 @@
-/**
- * Navbar — premium glassmorphism top bar
- */
 export default function Navbar({
   employees,
   selectedEmployee,
@@ -12,7 +9,6 @@ export default function Navbar({
 }) {
   const today = new Date().toISOString().split('T')[0];
 
-  // Group employees by squad
   const squads = {};
   employees.forEach(emp => {
     const key = emp.squad_name;
@@ -20,88 +16,121 @@ export default function Navbar({
     squads[key].push(emp);
   });
 
-  const weekBadge = weekInfo?.is_weekend
-    ? { label: 'Weekend', bg: 'rgba(245,158,11,0.12)', color: '#fcd34d', border: 'rgba(245,158,11,0.3)', icon: '🚫' }
+  const isWeekend = weekInfo?.is_weekend;
+
+  const weekBadge = isWeekend
+    ? { label: 'Weekend', bg: 'rgba(217,119,6,0.12)', color: '#d97706', border: 'rgba(217,119,6,0.28)', dot: '#d97706' }
     : weekInfo
-      ? { label: `Week ${weekInfo.week_in_cycle}`, bg: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: 'rgba(99,102,241,0.3)', icon: '↻' }
+      ? { label: `Week ${weekInfo.week_in_cycle}`, bg: 'rgba(46,196,182,0.12)', color: '#1a9e92', border: 'rgba(46,196,182,0.3)', dot: '#2ec4b6' }
       : null;
 
-  const designatedBadge = selectedEmployee && weekInfo && !weekInfo.is_weekend
+  const designatedBadge = selectedEmployee && weekInfo && !isWeekend
     ? isDesignatedDay
-      ? { label: 'In Office', bg: 'rgba(34,197,94,0.12)', color: '#86efac', border: 'rgba(34,197,94,0.3)', icon: '✓' }
-      : { label: 'WFH Day', bg: 'rgba(245,158,11,0.12)', color: '#fcd34d', border: 'rgba(245,158,11,0.3)', icon: '⚡' }
+      ? { label: 'Office Day', bg: 'rgba(42,157,92,0.1)', color: '#2a9d5c', border: 'rgba(42,157,92,0.28)', dot: '#2a9d5c' }
+      : { label: 'WFH Day',   bg: 'rgba(217,119,6,0.1)', color: '#d97706', border: 'rgba(217,119,6,0.28)', dot: '#d97706' }
     : null;
 
+  const initials = selectedEmployee
+    ? selectedEmployee.name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
+    : '';
+
   return (
+    /* Outer wrapper — provides the top gap so the pill floats */
     <header
-      className="sticky top-0 z-40 px-5 py-3"
       style={{
-        background: 'rgba(6,8,15,0.85)',
-        borderBottom: '1px solid rgba(30,38,64,0.8)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        boxShadow: '0 4px 32px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(99,102,241,0.08)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        padding: '14px 24px 10px',          /* top gap above pill, bottom gap below */
+        background: 'transparent',
+        pointerEvents: 'none',              /* let clicks pass through the gap area */
       }}
     >
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3">
+      {/* ── The Dynamic Island pill ─────────────────────────── */}
+      <div
+        style={{
+          pointerEvents: 'auto',
+          maxWidth: 1280,
+          margin: '0 auto',
+          height: 72,                        /* taller than before */
+          borderRadius: 9999,               /* full pill */
+          padding: '0 28px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
 
-        {/* Brand */}
-        <div className="flex items-center gap-3 mr-auto">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #7c3aed 100%)',
-              boxShadow: '0 0 20px rgba(99,102,241,0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.9"/>
-              <rect x="14" y="3" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.6"/>
-              <rect x="3" y="14" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.6"/>
-              <rect x="14" y="14" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.4"/>
+          /* Glassmorphism */
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(28px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.85)',
+          boxShadow:
+            '0 4px 32px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.9) inset, 0 -1px 0 rgba(0,0,0,0.04) inset',
+        }}
+      >
+
+        {/* ── Brand ─────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto', flexShrink: 0 }}>
+          <div style={{
+            width: 42, height: 42,
+            borderRadius: 14,
+            background: 'linear-gradient(135deg, #2ec4b6 0%, #1a9e92 100%)',
+            boxShadow: '0 2px 14px rgba(46,196,182,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'float 4s ease-in-out infinite',
+            flexShrink: 0,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="7" height="7" rx="2" fill="white" fillOpacity="0.95"/>
+              <rect x="14" y="3" width="7" height="7" rx="2" fill="white" fillOpacity="0.7"/>
+              <rect x="3" y="14" width="7" height="7" rx="2" fill="white" fillOpacity="0.7"/>
+              <rect x="14" y="14" width="7" height="7" rx="2" fill="white" fillOpacity="0.45"/>
             </svg>
           </div>
           <div>
-            <div
-              className="font-bold text-sm leading-none mb-0.5"
-              style={{
-                background: 'linear-gradient(135deg, #e8edfb, #a5b4fc)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
+            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', lineHeight: 1.1 }}>
               SeatBook
             </div>
-            <div className="text-xs leading-none" style={{ color: 'var(--text-muted)' }}>
-              Office Seat Manager
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 1 }}>
+              Office Manager
             </div>
           </div>
         </div>
 
-        {/* Status Badges */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* ── Status Badges ─────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {weekBadge && (
-            <span
-              className="badge"
-              style={{ background: weekBadge.bg, color: weekBadge.color, border: `1px solid ${weekBadge.border}`, boxShadow: `0 0 12px ${weekBadge.border}` }}
-            >
-              {weekBadge.icon} {weekBadge.label}
+            <span className="badge" style={{
+              background: weekBadge.bg,
+              color: weekBadge.color,
+              border: `1px solid ${weekBadge.border}`,
+              padding: '5px 11px',
+              fontSize: '11px',
+            }}>
+              <span className="glow-dot" style={{ background: weekBadge.dot }} />
+              {weekBadge.label}
             </span>
           )}
           {designatedBadge && (
-            <span
-              className="badge"
-              style={{ background: designatedBadge.bg, color: designatedBadge.color, border: `1px solid ${designatedBadge.border}`, boxShadow: `0 0 12px ${designatedBadge.border}` }}
-            >
-              {designatedBadge.icon} {designatedBadge.label}
+            <span className="badge" style={{
+              background: designatedBadge.bg,
+              color: designatedBadge.color,
+              border: `1px solid ${designatedBadge.border}`,
+              padding: '5px 11px',
+              fontSize: '11px',
+            }}>
+              <span className="glow-dot" style={{ background: designatedBadge.dot }} />
+              {designatedBadge.label}
             </span>
           )}
         </div>
 
-        {/* Date picker */}
-        <div className="flex flex-col min-w-0">
-          <label className="text-xs mb-1 font-medium" style={{ color: 'var(--text-muted)' }}>
+        {/* ── Separator ─────────────────────────────────────── */}
+        <div style={{ width: 1, height: 36, background: 'rgba(0,0,0,0.1)', flexShrink: 0 }} />
+
+        {/* ── Date picker ───────────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <label style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             Date
           </label>
           <input
@@ -111,13 +140,18 @@ export default function Navbar({
             min={today}
             onChange={e => onDateChange(e.target.value)}
             className="input"
-            style={{ width: 155 }}
+            style={{
+              width: 152, height: 36, padding: '0 10px', fontSize: '13px',
+              background: 'rgba(255,255,255,0.6)',
+              border: '1px solid rgba(0,0,0,0.12)',
+              borderRadius: 10,
+            }}
           />
         </div>
 
-        {/* Employee selector */}
-        <div className="flex flex-col" style={{ minWidth: 210 }}>
-          <label htmlFor="employee-select" className="text-xs mb-1 font-medium" style={{ color: 'var(--text-muted)' }}>
+        {/* ── Employee selector ─────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <label htmlFor="employee-select" style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             Employee
           </label>
           <select
@@ -128,13 +162,19 @@ export default function Navbar({
               onSelectEmployee(emp || null);
             }}
             className="input"
+            style={{
+              width: 224, height: 36, padding: '0 30px 0 10px', fontSize: '13px',
+              background: 'rgba(255,255,255,0.6)',
+              border: '1px solid rgba(0,0,0,0.12)',
+              borderRadius: 10,
+            }}
           >
             <option value="">— Select employee —</option>
             {Object.entries(squads).map(([squadName, members]) => (
               <optgroup key={squadName} label={`Squad ${squadName}`}>
                 {members.map(emp => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name} · Batch {emp.batch}
+                    {emp.name} · B{emp.batch}
                   </option>
                 ))}
               </optgroup>
@@ -142,32 +182,39 @@ export default function Navbar({
           </select>
         </div>
 
-        {/* Employee info chip */}
+        {/* ── Employee chip ─────────────────────────────────── */}
         {selectedEmployee && (
           <div
-            className="px-3 py-2 rounded-xl text-xs flex items-center gap-2.5 fade-in"
+            className="flex items-center gap-2.5 fade-in"
             style={{
-              background: 'rgba(99,102,241,0.08)',
-              border: '1px solid rgba(99,102,241,0.25)',
-              boxShadow: '0 0 20px rgba(99,102,241,0.06)',
+              background: 'rgba(46,196,182,0.09)',
+              border: '1px solid rgba(46,196,182,0.25)',
+              borderRadius: 9999,
+              padding: '6px 14px 6px 6px',
+              flexShrink: 0,
             }}
           >
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white' }}
-            >
-              {selectedEmployee.name.charAt(0)}
+            <div style={{
+              width: 32, height: 32,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #2ec4b6, #1a9e92)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 800, fontSize: 11, color: 'white',
+              flexShrink: 0,
+            }}>
+              {initials}
             </div>
             <div>
-              <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                 {selectedEmployee.name}
               </div>
-              <div style={{ color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.2 }}>
                 Squad {selectedEmployee.squad_name} · Batch {selectedEmployee.batch}
               </div>
             </div>
           </div>
         )}
+
       </div>
     </header>
   );

@@ -5,13 +5,14 @@ import SeatGrid from './components/SeatGrid';
 import BookingPanel from './components/BookingPanel';
 import WeekView from './components/WeekView';
 import { ToastContainer, showToast } from './components/Toast';
+import Login from './components/Login';
 
-// ─── Helpers (mirrors backend logic exactly) ────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const ANCHOR = new Date('2025-01-06T00:00:00'); // Known Week-1 Monday
+const ANCHOR = new Date('2025-01-06T00:00:00');
 
 function getWeekInCycle(dateStr) {
-  const d       = new Date(dateStr + 'T00:00:00');
+  const d        = new Date(dateStr + 'T00:00:00');
   const diffDays = Math.floor((d - ANCHOR) / 86_400_000);
   const cycleDay = ((diffDays % 14) + 14) % 14;
   return cycleDay < 7 ? 1 : 2;
@@ -26,7 +27,7 @@ function isDesignatedDay(employee, dateStr) {
   if (!employee || isWeekend(dateStr)) return false;
   const week   = getWeekInCycle(dateStr);
   const d      = new Date(dateStr + 'T00:00:00');
-  const isoDay = d.getDay() === 0 ? 7 : d.getDay(); // 1=Mon…7=Sun
+  const isoDay = d.getDay() === 0 ? 7 : d.getDay();
   if (employee.batch === 1) {
     return week === 1 ? isoDay <= 3 : isoDay >= 4 && isoDay <= 5;
   } else {
@@ -34,9 +35,9 @@ function isDesignatedDay(employee, dateStr) {
   }
 }
 
-// ─── App ────────────────────────────────────────────────────────────────────
+// ─── Main dashboard (only mounted after login) ───────────────────────────────
 
-export default function App() {
+function Dashboard() {
   const today = new Date().toISOString().split('T')[0];
 
   const [employees,        setEmployees]        = useState([]);
@@ -51,18 +52,13 @@ export default function App() {
   const [activeTab,        setActiveTab]        = useState('grid');
   const [loadingInit,      setLoadingInit]      = useState(true);
 
-  // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([
-      api.getEmployees(),
-      api.getSeats(),
-    ])
+    Promise.all([api.getEmployees(), api.getSeats()])
       .then(([emps, s]) => { setEmployees(emps); setSeats(s); })
       .catch(err => showToast('Failed to connect to server: ' + err.message, 'error'))
       .finally(() => setLoadingInit(false));
   }, []);
 
-  // ── Refresh bookings/seats/weekInfo on date change ─────────────────────────
   const refresh = useCallback(() => {
     if (!selectedDate) return;
     api.getBookings(selectedDate).then(setBookings).catch(console.error);
@@ -72,7 +68,6 @@ export default function App() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // ── Next 3 working days availability ──────────────────────────────────────
   useEffect(() => {
     api.getWeekInfo(today)
       .then(info => api.getAvailability(info.next_working_days))
@@ -80,11 +75,9 @@ export default function App() {
       .catch(console.error);
   }, [today]);
 
-  // ── My bookings when employee changes ────────────────────────────────────
   const refreshMyBookings = useCallback(() => {
-    if (selectedEmployee) {
+    if (selectedEmployee)
       api.getMyBookings(selectedEmployee.id).then(setMyBookings).catch(console.error);
-    }
   }, [selectedEmployee]);
 
   useEffect(() => {
@@ -92,15 +85,11 @@ export default function App() {
     else setMyBookings([]);
   }, [selectedEmployee, refreshMyBookings]);
 
-  // ── Derived state ──────────────────────────────────────────────────────────
   const designated = isDesignatedDay(selectedEmployee, selectedDate);
   const canBook    = !!selectedEmployee && !isWeekend(selectedDate);
 
   function handleSeatClick(seat) {
-    if (!selectedEmployee) {
-      showToast('Please select an employee first.', 'warning');
-      return;
-    }
+    if (!selectedEmployee) { showToast('Please select an employee first.', 'warning'); return; }
     setSelectedSeat(prev => prev?.id === seat.id ? null : seat);
   }
 
@@ -114,38 +103,41 @@ export default function App() {
   }
 
   const tabs = [
-    { id: 'grid', label: '🗺️  Seat Map'   },
-    { id: 'week', label: '📅  Week View' },
+    { id: 'grid', label: 'Seat Map',  emoji: '🗺️' },
+    { id: 'week', label: 'Week View', emoji: '📅' },
   ];
 
   if (loadingInit) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: 56, height: 56, borderRadius: 16, margin: '0 auto 20px',
-              background: 'linear-gradient(135deg, #6366f1, #4f46e5, #7c3aed)',
-              boxShadow: '0 0 40px rgba(99,102,241,0.5), 0 0 80px rgba(99,102,241,0.2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: 'float 2s ease-in-out infinite',
-            }}
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.9"/>
-              <rect x="14" y="3" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.6"/>
-              <rect x="3" y="14" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.6"/>
-              <rect x="14" y="14" width="7" height="7" rx="1.5" fill="white" fillOpacity="0.4"/>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', padding: 32 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 20,
+            background: 'linear-gradient(135deg, #2ec4b6 0%, #1a9e92 100%)',
+            boxShadow: '0 4px 24px rgba(46,196,182,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
+            animation: 'float 3s ease-in-out infinite',
+          }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="3" width="7" height="7" rx="2" fill="white" fillOpacity="0.95"/>
+              <rect x="14" y="3" width="7" height="7" rx="2" fill="white" fillOpacity="0.7"/>
+              <rect x="3" y="14" width="7" height="7" rx="2" fill="white" fillOpacity="0.7"/>
+              <rect x="14" y="14" width="7" height="7" rx="2" fill="white" fillOpacity="0.45"/>
             </svg>
           </div>
-          <div style={{ color: 'var(--text-primary)', fontSize: 18, fontWeight: 700, marginBottom: 6 }}>SeatBook</div>
-          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading your workspace…</div>
-          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 20 }}>
-            {[0,1,2].map(i => (
+          <div style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6, color: 'var(--text-primary)' }}>
+            SeatBook
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: 28 }}>
+            Loading your workspace…
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            {[0, 1, 2].map(i => (
               <div key={i} style={{
-                width: 6, height: 6, borderRadius: '50%',
-                background: '#6366f1',
-                animation: `glow-pulse 1.2s ease ${i * 0.2}s infinite`,
+                width: 8, height: 8, borderRadius: '50%',
+                background: '#2ec4b6',
+                animation: `glowPulse 1.4s ease ${i * 0.18}s infinite`,
               }} />
             ))}
           </div>
@@ -155,7 +147,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <ToastContainer />
 
       <Navbar
@@ -168,43 +160,23 @@ export default function App() {
         isDesignatedDay={designated}
       />
 
-      <main className="max-w-7xl mx-auto px-4 py-5">
-        {/* Tab switcher */}
-        <div
-          className="flex gap-1 mb-5 p-1 rounded-2xl w-fit"
-          style={{
-            background: 'rgba(14,20,34,0.9)',
-            border: '1px solid var(--border)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
-          }}
-        >
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 20px' }}>
+
+        <div className="tab-bar" style={{ marginBottom: 20 }}>
           {tabs.map(t => (
             <button
               key={t.id}
-              id={`tab-${t.id}`}
               onClick={() => setActiveTab(t.id)}
-              className="px-5 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{
-                background:  activeTab === t.id
-                  ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
-                  : 'transparent',
-                color:       activeTab === t.id ? 'white' : 'var(--text-muted)',
-                boxShadow:   activeTab === t.id
-                  ? '0 4px 16px rgba(99,102,241,0.4), inset 0 1px 0 rgba(255,255,255,0.1)'
-                  : 'none',
-                transform:   activeTab === t.id ? 'translateY(-1px)' : 'none',
-              }}
+              className={`tab-btn ${activeTab === t.id ? 'active' : 'inactive'}`}
             >
-              {t.label}
+              {t.emoji}{'  '}{t.label}
             </button>
           ))}
         </div>
 
-        {/* Grid tab */}
         {activeTab === 'grid' && (
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 min-w-0">
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 0', minWidth: 0 }}>
               <SeatGrid
                 seats={seats}
                 bookings={bookings}
@@ -217,7 +189,7 @@ export default function App() {
                 weekInfo={weekInfo}
               />
             </div>
-            <div className="w-full lg:w-80 shrink-0">
+            <div style={{ width: 300, flexShrink: 0 }}>
               <BookingPanel
                 selectedEmployee={selectedEmployee}
                 selectedSeat={selectedSeat}
@@ -236,7 +208,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Week tab */}
         {activeTab === 'week' && (
           <WeekView
             selectedEmployee={selectedEmployee}
@@ -246,4 +217,13 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+// ─── Root — controls login gate ───────────────────────────────────────────────
+
+export default function App() {
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  if (!loggedIn) return <Login onLogin={() => setLoggedIn(true)} />;
+  return <Dashboard />;
 }

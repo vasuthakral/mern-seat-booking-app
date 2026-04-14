@@ -8,10 +8,34 @@ export function showToast(message, type = 'info') {
 }
 
 const CONFIG = {
-  success: { icon: '✓', style: 'border-l-4 border-green-500 bg-green-950/80 text-green-200' },
-  error:   { icon: '✕', style: 'border-l-4 border-red-500   bg-red-950/80   text-red-200'   },
-  info:    { icon: 'ℹ', style: 'border-l-4 border-indigo-500 bg-indigo-950/80 text-indigo-200' },
-  warning: { icon: '⚠', style: 'border-l-4 border-yellow-500 bg-yellow-950/80 text-yellow-200' },
+  success: {
+    icon:   '✓',
+    bg:     '#ffffff',
+    border: 'rgba(42,157,92,0.35)',
+    bar:    '#2a9d5c',
+    color:  '#1e7a48',
+  },
+  error: {
+    icon:   '✕',
+    bg:     '#ffffff',
+    border: 'rgba(224,82,82,0.35)',
+    bar:    '#e05252',
+    color:  '#b83c3c',
+  },
+  info: {
+    icon:   'ℹ',
+    bg:     '#ffffff',
+    border: 'rgba(46,196,182,0.35)',
+    bar:    '#2ec4b6',
+    color:  '#1a9e92',
+  },
+  warning: {
+    icon:   '⚠',
+    bg:     '#ffffff',
+    border: 'rgba(217,119,6,0.35)',
+    bar:    '#d97706',
+    color:  '#b45309',
+  },
 };
 
 export function ToastContainer() {
@@ -29,21 +53,51 @@ export function ToastContainer() {
   }, []);
 
   return (
-    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" style={{ maxWidth: 360 }}>
+    <div style={{
+      position: 'fixed', top: 20, right: 20,
+      zIndex: 1000,
+      display: 'flex', flexDirection: 'column', gap: 8,
+      pointerEvents: 'none',
+      maxWidth: 360,
+    }}>
       {toasts.map(t => {
         const c = CONFIG[t.type] || CONFIG.info;
         return (
           <div
             key={t.id}
-            className={`
-              ${t.exiting ? 'toast-exit' : 'toast-enter'}
-              ${c.style}
-              rounded-lg px-4 py-3 flex items-start gap-3
-              shadow-2xl backdrop-blur-md pointer-events-auto
-            `}
+            className={t.exiting ? 'toast-exit' : 'toast-enter'}
+            style={{
+              background: c.bg,
+              border: `1px solid ${c.border}`,
+              borderRadius: 14,
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 11,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.1)',
+              pointerEvents: 'auto',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
           >
-            <span className="text-base font-bold shrink-0 mt-0.5">{c.icon}</span>
-            <span className="text-sm font-medium leading-snug">{t.message}</span>
+            <div style={{
+              position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+              background: c.bar,
+              borderRadius: '14px 0 0 14px',
+            }} />
+            <span style={{
+              width: 22, height: 22, borderRadius: 7,
+              background: `${c.bar}18`,
+              border: `1px solid ${c.bar}33`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '12px', fontWeight: 800, color: c.bar,
+              flexShrink: 0,
+            }}>
+              {c.icon}
+            </span>
+            <span style={{ fontSize: '13px', fontWeight: 500, color: c.color, lineHeight: 1.55, paddingLeft: 3 }}>
+              {t.message}
+            </span>
           </div>
         );
       })}

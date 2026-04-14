@@ -85,30 +85,64 @@ export default function BookingPanel({
     selectedEmployee &&
     (isDesignatedDay || selectedSeat.is_floater);
 
-  const SectionTitle = ({ icon, children }) => (
-    <h3 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-      <span
-        className="w-6 h-6 rounded-md flex items-center justify-center text-xs"
-        style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}
-      >
-        {icon}
-      </span>
-      {children}
-    </h3>
-  );
+  const cardSection = {
+    background: '#ffffff',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--r-xl)',
+    padding: '18px 16px',
+    position: 'relative',
+    overflow: 'hidden',
+    boxShadow: 'var(--shadow-md)',
+  };
+
+  const rowCard = (highlighted = false) => ({
+    background: highlighted ? 'rgba(244,132,95,0.06)' : 'rgba(0,0,0,0.02)',
+    border: `1px solid ${highlighted ? 'rgba(244,132,95,0.22)' : 'var(--border)'}`,
+    borderRadius: 'var(--r-md)',
+    padding: '10px 12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    transition: 'background 0.2s',
+  });
+
+  function PanelCard({ icon, title, children }) {
+    return (
+      <div style={cardSection} className="card no-hover">
+        <div style={{
+          position: 'absolute', top: 0, left: '15%', right: '15%', height: '2px',
+          background: 'linear-gradient(90deg, transparent, rgba(46,196,182,0.3), transparent)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 }}>
+          <div className="section-icon">{icon}</div>
+          <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
+        </div>
+        {children}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-      {/* ── 1. Book / Seat Info ─────────────────────────────── */}
-      <div className="card p-4">
-        <SectionTitle icon="⊕">Book a Seat</SectionTitle>
+      {/* ══ 1. Book / Seat Actions ═══════════════════════════ */}
+      <PanelCard icon="⊕" title="Book a Seat">
 
         {!selectedEmployee && (
-          <div className="text-center py-4">
-            <div className="text-2xl mb-2" style={{ opacity: 0.4 }}>👤</div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Select an employee to get started.
+          <div style={{ textAlign: 'center', padding: '12px 0' }}>
+            <div style={{
+              width: 52, height: 52, margin: '0 auto 12px',
+              borderRadius: 16,
+              background: 'rgba(46,196,182,0.08)',
+              border: '1px solid var(--accent-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 24,
+            }}>
+              👤
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              Select an employee from the top bar <br/>to start booking.
             </p>
           </div>
         )}
@@ -122,35 +156,57 @@ export default function BookingPanel({
 
         {selectedEmployee && !weekInfo?.is_weekend && myTodayBooking && !selectedSeat && (
           <div className="fade-up">
-            <div
-              className="rounded-xl p-3 mb-3 flex items-center gap-3"
-              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)' }}
-            >
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center mono font-bold text-lg shrink-0"
-                style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.3),rgba(79,70,229,0.2))', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.4)' }}
-              >
-                #{myTodayBooking.seat_id}
+            <div style={{ ...rowCard(true), marginBottom: 10 }}>
+              <div style={{
+                width: 42, height: 42,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, rgba(244,132,95,0.18), rgba(244,132,95,0.08))',
+                border: '1px solid rgba(244,132,95,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <span className="mono" style={{ fontWeight: 800, fontSize: '14px', color: '#f4845f' }}>
+                  #{myTodayBooking.seat_id}
+                </span>
               </div>
               <div>
-                <div className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>Your booking for</div>
-                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{fmt(selectedDate)}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 2 }}>Your booking for</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmt(selectedDate)}</div>
               </div>
+              <span className="badge" style={{
+                marginLeft: 'auto',
+                background: 'var(--green-bg)', color: 'var(--green)', border: '1px solid var(--green-border)',
+              }}>
+                ✓ Active
+              </span>
             </div>
             <button
-              className="btn btn-danger w-full"
+              className="btn btn-danger"
+              style={{ width: '100%' }}
               onClick={() => handleCancel(myTodayBooking.id)}
               disabled={cancelLoading === myTodayBooking.id}
             >
-              {cancelLoading === myTodayBooking.id ? <><span className="spinner" /> Cancelling…</> : '✕ Release My Seat'}
+              {cancelLoading === myTodayBooking.id
+                ? <><span className="spinner" /> Cancelling…</>
+                : '✕ Release My Seat'
+              }
             </button>
           </div>
         )}
 
         {selectedEmployee && !weekInfo?.is_weekend && !myTodayBooking && !selectedSeat && (
-          <div className="text-center py-3">
-            <div className="text-xl mb-2" style={{ opacity: 0.35 }}>🗺️</div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          <div style={{ textAlign: 'center', padding: '12px 0' }}>
+            <div style={{
+              width: 52, height: 52, margin: '0 auto 12px',
+              borderRadius: 16,
+              background: isDesignatedDay ? 'rgba(42,157,92,0.07)' : 'rgba(217,119,6,0.07)',
+              border: `1px solid ${isDesignatedDay ? 'rgba(42,157,92,0.22)' : 'rgba(217,119,6,0.22)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 24,
+            }}>
+              🗺️
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
               {isDesignatedDay
                 ? 'Click any green seat on the map to select it.'
                 : 'Non-designated day. Only floater seats (41–50) available.'
@@ -160,58 +216,74 @@ export default function BookingPanel({
         )}
 
         {selectedEmployee && selectedSeat && (
-          <div className="fade-up space-y-3">
-            {/* Seat info */}
-            <div
-              className="rounded-xl p-4"
-              style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-light)' }}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Selected Seat</div>
+          <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+            <div style={{
+              background: '#fafaf9',
+              border: '1px solid var(--border-medium)',
+              borderRadius: 14,
+              padding: '14px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Selected Seat
+                </span>
                 <button
                   onClick={onSeatClear}
-                  className="text-xs transition-colors hover:text-white"
-                  style={{ color: 'var(--text-muted)' }}
+                  style={{
+                    fontSize: '11px', color: 'var(--text-muted)',
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+                    fontFamily: 'Inter, sans-serif',
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={e => e.target.style.color = 'var(--text-primary)'}
+                  onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}
                 >
                   ✕ clear
                 </button>
               </div>
-              <div className="mono font-black" style={{ fontSize: 38, lineHeight: 1, color: '#a5b4fc', textShadow: '0 0 30px rgba(99,102,241,0.4)' }}>
+
+              <div className="mono" style={{
+                fontSize: '44px', fontWeight: 900, lineHeight: 1,
+                color: '#f4845f',
+                marginBottom: 10,
+              }}>
                 #{selectedSeat.id}
               </div>
-              <div className="flex flex-wrap gap-1.5 mt-3">
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {selectedSeat.is_floater && (
-                  <span className="badge" style={{ background: 'var(--blue-bg)', color: '#93c5fd', border: '1px solid var(--blue-border)' }}>
-                    Floater
+                  <span className="badge" style={{ background: 'var(--blue-bg)', color: 'var(--accent-dark)', border: '1px solid var(--blue-border)' }}>
+                    ◈ Floater
                   </span>
                 )}
                 {selectedSeat.is_blocked && (
-                  <span className="badge" style={{ background: 'var(--gray-bg)', color: '#9ca3af', border: '1px solid var(--gray-border)' }}>
-                    Blocked
+                  <span className="badge" style={{ background: 'var(--slate-bg)', color: '#6b7280', border: '1px solid var(--slate-border)' }}>
+                    ⛔ Blocked
                   </span>
                 )}
                 {isMySelectedSeat && (
-                  <span className="badge" style={{ background: 'var(--purple-bg)', color: 'var(--accent-light)', border: '1px solid var(--purple-border)' }}>
+                  <span className="badge" style={{ background: 'var(--peach-bg)', color: '#c45a35', border: '1px solid var(--peach-border)' }}>
                     ★ Your Booking
                   </span>
                 )}
                 {selectedSeatBooking && !isMySelectedSeat && (
-                  <span className="badge" style={{ background: 'var(--red-bg)', color: '#fca5a5', border: '1px solid var(--red-border)' }}>
-                    Taken — {selectedSeatBooking.employee_name}
+                  <span className="badge" style={{ background: 'var(--red-bg)', color: 'var(--red)', border: '1px solid var(--red-border)' }}>
+                    ✕ Taken — {selectedSeatBooking.employee_name}
                   </span>
                 )}
                 {!selectedSeatBooking && !selectedSeat.is_blocked && (
-                  <span className="badge" style={{ background: 'var(--green-bg)', color: '#86efac', border: '1px solid var(--green-border)' }}>
+                  <span className="badge" style={{ background: 'var(--green-bg)', color: 'var(--green)', border: '1px solid var(--green-border)' }}>
                     ✓ Available
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Actions */}
             {isMySelectedSeat && (
               <button
-                className="btn btn-danger w-full"
+                className="btn btn-danger"
+                style={{ width: '100%' }}
                 onClick={() => handleCancel(myTodayBooking.id)}
                 disabled={cancelLoading === myTodayBooking.id}
               >
@@ -221,10 +293,10 @@ export default function BookingPanel({
 
             {seatIsBookableByThisUser && (
               <button
-                className="btn btn-primary w-full"
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '12px 18px', fontSize: '14px' }}
                 onClick={handleBook}
                 disabled={bookLoading}
-                style={{ padding: '11px 18px', fontSize: 14 }}
               >
                 {bookLoading ? <><span className="spinner" /> Booking…</> : `Book Seat #${selectedSeat.id}`}
               </button>
@@ -244,114 +316,129 @@ export default function BookingPanel({
               </div>
             )}
 
-            {/* Block / Unblock */}
-            <div className="pt-1">
+            <div style={{ paddingTop: 2 }}>
               <button
-                className="btn btn-warning w-full"
+                className="btn btn-warning"
+                style={{ width: '100%' }}
                 onClick={() => handleBlock(selectedSeat.id, selectedSeat.is_blocked)}
                 disabled={blockLoading}
               >
                 {blockLoading
                   ? <><span className="spinner" /> Processing…</>
-                  : selectedSeat.is_blocked
-                    ? '🔓 Unblock Seat'
-                    : '🔒 Block Seat'
+                  : selectedSeat.is_blocked ? '🔓 Unblock Seat' : '🔒 Block Seat'
                 }
               </button>
-              <p className="text-xs mt-1.5 text-center" style={{ color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: '10.5px', textAlign: 'center', marginTop: 5, color: 'var(--text-dim)' }}>
                 Blocking only allowed after 3:00 PM
               </p>
             </div>
+
           </div>
         )}
-      </div>
+      </PanelCard>
 
-      {/* ── 2. My Upcoming Bookings ─────────────────────────── */}
+      {/* ══ 2. My Bookings ══════════════════════════════════ */}
       {selectedEmployee && (
-        <div className="card p-4">
-          <SectionTitle icon="📅">My Bookings</SectionTitle>
+        <PanelCard icon="📅" title="My Bookings">
           {myBookings.length === 0 ? (
-            <div className="text-center py-3">
-              <div className="text-xl mb-1.5" style={{ opacity: 0.3 }}>📭</div>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No upcoming bookings</p>
+            <div style={{ textAlign: 'center', padding: '10px 0' }}>
+              <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.25 }}>📭</div>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No upcoming bookings</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {myBookings.map(b => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between rounded-xl px-3 py-2.5"
-                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center mono font-bold text-xs shrink-0"
-                      style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--accent-light)', border: '1px solid rgba(99,102,241,0.2)' }}
-                    >
-                      #{b.seat_id}
+                <div key={b.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: 'rgba(0,0,0,0.02)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 11,
+                  padding: '8px 10px',
+                  gap: 8,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                      background: 'rgba(244,132,95,0.1)',
+                      border: '1px solid rgba(244,132,95,0.22)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span className="mono" style={{ fontSize: '11px', fontWeight: 800, color: '#f4845f' }}>
+                        #{b.seat_id}
+                      </span>
                     </div>
                     <div>
-                      <div className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                         Seat {b.seat_id}
                         {b.is_floater && (
-                          <span className="ml-1.5 badge" style={{ background: 'var(--blue-bg)', color: '#93c5fd', border: '1px solid var(--blue-border)' }}>F</span>
+                          <span className="badge" style={{
+                            marginLeft: 5,
+                            background: 'var(--blue-bg)', color: 'var(--accent-dark)', border: '1px solid var(--blue-border)',
+                            fontSize: '9px',
+                          }}>
+                            F
+                          </span>
                         )}
                       </div>
-                      <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{fmt(b.date)}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{fmt(b.date)}</div>
                     </div>
                   </div>
                   <button
                     className="btn btn-danger"
-                    style={{ padding: '4px 10px', fontSize: 11 }}
+                    style={{ padding: '5px 10px', fontSize: '11px' }}
                     onClick={() => handleCancel(b.id)}
                     disabled={cancelLoading === b.id}
                   >
-                    {cancelLoading === b.id ? <span className="spinner" style={{ width: 11, height: 11 }} /> : 'Cancel'}
+                    {cancelLoading === b.id ? <span className="spinner" style={{ width: 10, height: 10 }} /> : 'Cancel'}
                   </button>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </PanelCard>
       )}
 
-      {/* ── 3. Upcoming Availability ────────────────────────── */}
+      {/* ══ 3. Upcoming Availability ════════════════════════ */}
       {availability.length > 0 && (
-        <div className="card p-4">
-          <SectionTitle icon="🔮">Upcoming Availability</SectionTitle>
-          <div className="space-y-3">
+        <PanelCard icon="📊" title="Upcoming Availability">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {availability.map(a => {
-              const pct     = Math.round((a.booked / 50) * 100);
-              const fillClr = pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#22c55e';
-              const fillBg  = pct > 80
-                ? 'linear-gradient(90deg,#ef4444,#dc2626)'
+              const pct  = Math.round((a.booked / 50) * 100);
+              const clr  = pct > 80 ? '#e05252' : pct > 50 ? '#d97706' : '#2a9d5c';
+              const grad = pct > 80
+                ? 'linear-gradient(90deg,#e05252,#c43c3c)'
                 : pct > 50
-                  ? 'linear-gradient(90deg,#f59e0b,#d97706)'
-                  : 'linear-gradient(90deg,#22c55e,#16a34a)';
+                  ? 'linear-gradient(90deg,#d97706,#b45309)'
+                  : 'linear-gradient(90deg,#2a9d5c,#1e7a48)';
+
               return (
-                <div
-                  key={a.date}
-                  className="rounded-xl p-3"
-                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                <div key={a.date} style={{
+                  background: 'rgba(0,0,0,0.02)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 11,
+                  padding: '10px 12px',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
                       {fmt(a.date)}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="mono text-xs font-bold" style={{ color: fillClr }}>{a.available}</span>
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>/ 50 free</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span className="mono" style={{ fontSize: '12px', fontWeight: 800, color: clr }}>
+                        {a.available}
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/ 50 free</span>
                     </div>
                   </div>
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${pct}%`, background: fillBg }} />
+                    <div className="progress-fill" style={{ width: `${pct}%`, background: grad }} />
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </PanelCard>
       )}
+
     </div>
   );
 }
