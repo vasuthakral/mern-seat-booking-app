@@ -8,6 +8,9 @@ export default function Navbar({
   isDesignatedDay,
 }) {
   const today = new Date().toISOString().split('T')[0];
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  const maxDate = oneYearFromNow.toISOString().split('T')[0];
 
   const squads = {};
   employees.forEach(emp => {
@@ -17,14 +20,18 @@ export default function Navbar({
   });
 
   const isWeekend = weekInfo?.is_weekend;
+  const isHoliday = weekInfo?.is_holiday;
+  const holidayName = weekInfo?.holiday_name;
 
-  const weekBadge = isWeekend
-    ? { label: 'Weekend', bg: 'rgba(217,119,6,0.12)', color: '#d97706', border: 'rgba(217,119,6,0.28)', dot: '#d97706' }
-    : weekInfo
-      ? { label: `Week ${weekInfo.week_in_cycle}`, bg: 'rgba(46,196,182,0.12)', color: '#1a9e92', border: 'rgba(46,196,182,0.3)', dot: '#2ec4b6' }
-      : null;
+  const weekBadge = isHoliday
+    ? { label: holidayName || 'Holiday', bg: 'rgba(244,132,95,0.12)', color: '#f4845f', border: 'rgba(244,132,95,0.3)', dot: '#f4845f' }
+    : isWeekend
+      ? { label: 'Weekend', bg: 'rgba(217,119,6,0.12)', color: '#d97706', border: 'rgba(217,119,6,0.28)', dot: '#d97706' }
+      : weekInfo
+        ? { label: `Week ${weekInfo.week_in_cycle}`, bg: 'rgba(46,196,182,0.12)', color: '#1a9e92', border: 'rgba(46,196,182,0.3)', dot: '#2ec4b6' }
+        : null;
 
-  const designatedBadge = selectedEmployee && weekInfo && !isWeekend
+  const designatedBadge = selectedEmployee && weekInfo && !isWeekend && !isHoliday
     ? isDesignatedDay
       ? { label: 'Office Day', bg: 'rgba(42,157,92,0.1)', color: '#2a9d5c', border: 'rgba(42,157,92,0.28)', dot: '#2a9d5c' }
       : { label: 'WFH Day',   bg: 'rgba(217,119,6,0.1)', color: '#d97706', border: 'rgba(217,119,6,0.28)', dot: '#d97706' }
@@ -138,6 +145,7 @@ export default function Navbar({
             type="date"
             value={selectedDate}
             min={today}
+            max={maxDate}
             onChange={e => onDateChange(e.target.value)}
             className="input"
             style={{

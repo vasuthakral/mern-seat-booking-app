@@ -5,7 +5,9 @@ export default function SeatCard({ seat, booking, isMyBooking, isSelected, onCli
 
   const isAvailableForClick = !isBlocked && !isBooked;
   const canClickSeat = isMyBooking || (
-    isAvailableForClick && (isDesignatedDay || isFloater)
+    isAvailableForClick && (
+      isDesignatedDay ? !isFloater : isFloater
+    )
   );
   const isTrulyClickable = !!canBook && canClickSeat;
 

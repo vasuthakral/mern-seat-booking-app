@@ -94,6 +94,7 @@ npm run dev
 | `GET`    | `/my-bookings?employee_id=` | Get upcoming bookings for employee |
 | `GET`    | `/week-info?date=`     | Cycle week info + next working days  |
 | `GET`    | `/availability?dates=` | Booked/free counts for given dates   |
+| `GET`    | `/holidays?year=`      | Get public holidays (optional year param) |
 | `POST`   | `/book`                | Book a seat `{employee_id, seat_id, date}` |
 | `DELETE` | `/booking/:id`         | Cancel a booking `{employee_id}` in body |
 | `PATCH`  | `/seat/:id/block`      | Block/unblock a seat `{block: bool}` |
@@ -104,12 +105,13 @@ npm run dev
 ## Booking Rules (Enforced on Both Frontend & Backend)
 
 1. **Weekend guard** — No bookings on Saturday or Sunday  
-2. **Designated days** — Employees can book any regular seat on their scheduled days  
-3. **Non-designated days** — Only floater seats (41–50) can be booked  
-4. **Blocked seats** — Cannot be booked by anyone  
-5. **Double booking** — DB-level UNIQUE constraints prevent same seat being booked twice on same day  
-6. **One booking per day** — DB UNIQUE constraint prevents an employee booking multiple seats per day  
-7. **Block timing** — Seats can only be ***blocked*** after 3:00 PM (for next working day); unblocking is always allowed  
+2. **Public holidays** — No bookings on Indian national holidays (Republic Day, Independence Day, Diwali, etc.)  
+3. **Designated days** — Employees can book any regular seat on their scheduled days  
+4. **Non-designated days** — Only floater seats (41–50) can be booked  
+5. **Blocked seats** — Cannot be booked by anyone  
+6. **Double booking** — DB-level UNIQUE constraints prevent same seat being booked twice on same day  
+7. **One booking per day** — DB UNIQUE constraint prevents an employee booking multiple seats per day  
+8. **Block timing** — Seats can only be ***blocked*** after 3:00 PM (for next working day); unblocking is always allowed  
 
 ---
 
@@ -131,6 +133,7 @@ npm run dev
 seat-booking/
 ├── backend/
 │   ├── server.js          # Express API
+│   ├── holidays.js        # Indian public holidays data
 │   ├── schema.sql         # PostgreSQL schema + seed data
 │   ├── .env.example       # Environment template
 │   └── package.json

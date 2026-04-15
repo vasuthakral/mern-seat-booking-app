@@ -1,6 +1,7 @@
 const express = require('express');
 const cors    = require('cors');
 const { Pool } = require('pg');
+const { isHoliday, getHolidaysInRange } = require('./holidays');
 
 const app = express();
 
@@ -34,6 +35,11 @@ function isWeekend(dateStr) {
   return day === 0 || day === 6;
 }
 
+/** Returns true if date is a weekend or public holiday. */
+function isNonWorkingDay(dateStr) {
+  return isWeekend(dateStr) || !!isHoliday(dateStr);
+}
+
 /**
  * Returns 1 or 2 — the week within the current 2-week cycle.
  * Anchored to 2025-01-06 (a known Monday of Week 1 in cycle).
@@ -60,7 +66,7 @@ function getISODay(dateStr) {
  *   Batch 2 — Week 1: Thu–Fri  | Week 2: Mon–Wed
  */
 function isDesignatedDay(batch, dateStr) {
-  if (isWeekend(dateStr)) return false;
+  if (isNonWorkingDay(dateStr)) return false;
   const week   = getWeekInCycle(dateStr);
   const isoDay = getISODay(dateStr);
   if (batch === 1) {
@@ -74,14 +80,14 @@ function isDesignatedDay(batch, dateStr) {
   }
 }
 
-/** Get next N working days (Mon–Fri) starting from tomorrow. */
-function getNextWorkingDays(n) {
+/** Get next N working days (Mon–Fri, excluding holidays) starting from tomorrow. */
+function getNextWorkingDays(n = 14) {
   const days = [];
   const d    = new Date();
   d.setDate(d.getDate() + 1); // start from tomorrow
   while (days.length < n) {
     const iso = d.toISOString().split('T')[0];
-    if (!isWeekend(iso)) days.push(iso);
+    if (!isNonWorkingDay(iso)) days.push(iso);
     d.setDate(d.getDate() + 1);
   }
   return days;
@@ -156,11 +162,15 @@ app.get('/my-bookings', async (req, res) => {
 // GET /week-info?date=YYYY-MM-DD
 app.get('/week-info', async (req, res) => {
   const date = req.query.date || new Date().toISOString().split('T')[0];
+  const count = parseInt(req.query.count) || 14;
+  const holiday = isHoliday(date);
   res.json({
     date,
     week_in_cycle:     getWeekInCycle(date),
     is_weekend:        isWeekend(date),
-    next_working_days: getNextWorkingDays(3),
+    is_holiday:        !!holiday,
+    holiday_name:      holiday ? holiday.name : null,
+    next_working_days: getNextWorkingDays(count),
     next_working_day:  getNextWorkingDays(1)[0],
   });
 });
@@ -170,21 +180,60 @@ app.get('/availability', async (req, res) => {
   const dates = (req.query.dates || '').split(',').filter(Boolean);
   if (dates.length === 0) return res.status(400).json({ error: 'dates query param is required' });
   try {
-    const { rows } = await pool.query(`
+    // Get total bookings per date
+    const { rows: totalRows } = await pool.query(`
       SELECT date::text AS date, COUNT(*) AS booked_count
       FROM bookings
       WHERE date = ANY($1::date[])
       GROUP BY date
     `, [dates]);
 
-    const map = {};
-    rows.forEach(r => { map[r.date] = parseInt(r.booked_count); });
+    // Get regular seat bookings (non-floater)
+    const { rows: regularRows } = await pool.query(`
+      SELECT b.date::text AS date, COUNT(*) AS booked_count
+      FROM bookings b
+      JOIN seats s ON s.id = b.seat_id
+      WHERE b.date = ANY($1::date[]) AND s.is_floater = false
+      GROUP BY b.date
+    `, [dates]);
+
+    // Get floater seat bookings
+    const { rows: floaterRows } = await pool.query(`
+      SELECT b.date::text AS date, COUNT(*) AS booked_count
+      FROM bookings b
+      JOIN seats s ON s.id = b.seat_id
+      WHERE b.date = ANY($1::date[]) AND s.is_floater = true
+      GROUP BY b.date
+    `, [dates]);
+
+    // Get seat counts
+    const { rows: seatCounts } = await pool.query(`
+      SELECT 
+        COUNT(*) FILTER (WHERE is_floater = false AND is_blocked = false) AS regular_seats,
+        COUNT(*) FILTER (WHERE is_floater = true AND is_blocked = false) AS floater_seats
+      FROM seats
+    `);
+
+    const regularSeats = parseInt(seatCounts[0].regular_seats);
+    const floaterSeats = parseInt(seatCounts[0].floater_seats);
+
+    const totalMap = {};
+    const regularMap = {};
+    const floaterMap = {};
+    
+    totalRows.forEach(r => { totalMap[r.date] = parseInt(r.booked_count); });
+    regularRows.forEach(r => { regularMap[r.date] = parseInt(r.booked_count); });
+    floaterRows.forEach(r => { floaterMap[r.date] = parseInt(r.booked_count); });
 
     const availability = dates.map(d => ({
-      date:          d,
-      booked:        map[d] || 0,
-      available:     50 - (map[d] || 0),
-      week_in_cycle: getWeekInCycle(d),
+      date:              d,
+      booked:            totalMap[d] || 0,
+      available:         50 - (totalMap[d] || 0),
+      regular_booked:    regularMap[d] || 0,
+      regular_available: regularSeats - (regularMap[d] || 0),
+      floater_booked:    floaterMap[d] || 0,
+      floater_available: floaterSeats - (floaterMap[d] || 0),
+      week_in_cycle:     getWeekInCycle(d),
     }));
     res.json(availability);
   } catch (err) {
@@ -201,9 +250,13 @@ app.post('/book', async (req, res) => {
   }
 
   try {
-    // Weekend check
+    // Weekend/Holiday check
     if (isWeekend(date)) {
       return res.status(400).json({ error: 'Booking is not allowed on weekends.' });
+    }
+    const holiday = isHoliday(date);
+    if (holiday) {
+      return res.status(400).json({ error: `Booking is not allowed on public holidays. ${date} is ${holiday.name}.` });
     }
 
     // Fetch employee
@@ -310,6 +363,25 @@ app.patch('/seat/:id/block', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// GET /holidays?year=2025
+app.get('/holidays', async (req, res) => {
+  const year = req.query.year;
+  if (year) {
+    const { getHolidaysByYear } = require('./holidays');
+    const yearHolidays = getHolidaysByYear(parseInt(year));
+    return res.json(yearHolidays);
+  }
+  
+  // Return holidays in next 365 days
+  const today = new Date().toISOString().split('T')[0];
+  const oneYearLater = new Date();
+  oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+  const endDate = oneYearLater.toISOString().split('T')[0];
+  
+  const upcomingHolidays = getHolidaysInRange(today, endDate);
+  res.json(upcomingHolidays);
 });
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────

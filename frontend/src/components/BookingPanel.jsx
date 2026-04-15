@@ -9,6 +9,7 @@ export default function BookingPanel({
   bookings,
   myBookings,
   availability,
+  seats,
   weekInfo,
   onBooked,
   onCancelled,
@@ -23,6 +24,8 @@ export default function BookingPanel({
   const myTodayBooking      = bookings.find(b => selectedEmployee && b.employee_id === selectedEmployee.id);
   const selectedSeatBooking = selectedSeat ? bookings.find(b => b.seat_id === selectedSeat.id) : null;
   const isMySelectedSeat    = !!(myTodayBooking && selectedSeat && myTodayBooking.seat_id === selectedSeat.id);
+  const isHoliday           = weekInfo?.is_holiday;
+  const holidayName         = weekInfo?.holiday_name;
 
   async function handleBook() {
     if (!selectedEmployee || !selectedSeat || !selectedDate) return;
@@ -75,6 +78,26 @@ export default function BookingPanel({
 
   const fmt = (dateStr) =>
     new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  // Helper to check if employee is designated for a specific date
+  function isDesignatedForDate(employee, dateStr) {
+    if (!employee) return false;
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    if (day === 0 || day === 6) return false; // weekend
+    
+    const ANCHOR = new Date('2025-01-06T00:00:00');
+    const diffDays = Math.floor((d - ANCHOR) / 86_400_000);
+    const cycleDay = ((diffDays % 14) + 14) % 14;
+    const week = cycleDay < 7 ? 1 : 2;
+    const isoDay = day === 0 ? 7 : day;
+    
+    if (employee.batch === 1) {
+      return week === 1 ? isoDay <= 3 : isoDay >= 4 && isoDay <= 5;
+    } else {
+      return week === 1 ? isoDay >= 4 && isoDay <= 5 : isoDay <= 3;
+    }
+  }
 
   const seatIsBookableByThisUser =
     selectedSeat &&
@@ -154,7 +177,23 @@ export default function BookingPanel({
           </div>
         )}
 
-        {selectedEmployee && !weekInfo?.is_weekend && myTodayBooking && !selectedSeat && (
+        {selectedEmployee && isHoliday && (
+          <div className="alert" style={{
+            background: 'linear-gradient(135deg, rgba(244,132,95,0.08) 0%, rgba(244,132,95,0.04) 100%)',
+            border: '1.5px solid rgba(244,132,95,0.3)',
+            color: '#c45a35',
+          }}>
+            <span style={{ fontSize: '18px' }}>🎉</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: 3 }}>{holidayName}</div>
+              <div style={{ fontSize: '11px', lineHeight: 1.5, opacity: 0.9 }}>
+                It's a public holiday! Office is closed today. Relax and enjoy your day! ✨
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedEmployee && !weekInfo?.is_weekend && !isHoliday && myTodayBooking && !selectedSeat && (
           <div className="fade-up">
             <div style={{ ...rowCard(true), marginBottom: 10 }}>
               <div style={{
@@ -194,7 +233,7 @@ export default function BookingPanel({
           </div>
         )}
 
-        {selectedEmployee && !weekInfo?.is_weekend && !myTodayBooking && !selectedSeat && (
+        {selectedEmployee && !weekInfo?.is_weekend && !isHoliday && !myTodayBooking && !selectedSeat && (
           <div style={{ textAlign: 'center', padding: '12px 0' }}>
             <div style={{
               width: 52, height: 52, margin: '0 auto 12px',
@@ -399,13 +438,41 @@ export default function BookingPanel({
       )}
 
       {/* ══ 3. Upcoming Availability ════════════════════════ */}
-      {availability.length > 0 && (
+      {availability.length > 0 && seats.length > 0 && (
         <PanelCard icon="📊" title="Upcoming Availability">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {availability.map(a => {
-              const pct  = Math.round((a.booked / 50) * 100);
-              const clr  = pct > 80 ? '#e05252' : pct > 50 ? '#d97706' : '#2a9d5c';
-              const grad = pct > 80
+              let totalSeats, available, booked, pct, clr, grad, label;
+              
+              if (selectedEmployee) {
+                const designated = isDesignatedForDate(selectedEmployee, a.date);
+                
+                if (designated) {
+                  // Show regular seats availability (1-40)
+                  booked = a.regular_booked || 0;
+                  available = a.regular_available || 0;
+                  totalSeats = booked + available;
+                  label = 'regular';
+                } else {
+                  // Show floater seats availability (41-50)
+                  booked = a.floater_booked || 0;
+                  available = a.floater_available || 0;
+                  totalSeats = booked + available;
+                  label = 'floater';
+                }
+                
+                pct = totalSeats > 0 ? Math.round((booked / totalSeats) * 100) : 0;
+              } else {
+                // No employee selected - show all seats
+                totalSeats = 50;
+                booked = a.booked || 0;
+                available = a.available;
+                pct = Math.round((booked / 50) * 100);
+                label = 'total';
+              }
+              
+              clr = pct > 80 ? '#e05252' : pct > 50 ? '#d97706' : '#2a9d5c';
+              grad = pct > 80
                 ? 'linear-gradient(90deg,#e05252,#c43c3c)'
                 : pct > 50
                   ? 'linear-gradient(90deg,#d97706,#b45309)'
@@ -424,14 +491,19 @@ export default function BookingPanel({
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <span className="mono" style={{ fontSize: '12px', fontWeight: 800, color: clr }}>
-                        {a.available}
+                        {available}
                       </span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/ 50 free</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/ {totalSeats} free</span>
                     </div>
                   </div>
                   <div className="progress-bar">
                     <div className="progress-fill" style={{ width: `${pct}%`, background: grad }} />
                   </div>
+                  {selectedEmployee && label !== 'total' && (
+                    <div style={{ fontSize: '9px', color: 'var(--text-dim)', marginTop: 4 }}>
+                      {label} seats only
+                    </div>
+                  )}
                 </div>
               );
             })}

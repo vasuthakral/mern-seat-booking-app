@@ -42,12 +42,13 @@ export default function WeekView({ selectedEmployee, currentDate }) {
   useEffect(() => {
     if (weekDates.length === 0) return;
     setLoading(true);
-    Promise.all([
-      api.getAvailability(weekDates),
-      ...weekDates.map(d => api.getBookings(d).then(b => ({ date: d, bookings: b }))),
-    ])
-      .then(([avail, ...dayBookings]) => {
+    api.getAvailability(weekDates)
+      .then(avail => {
         setAvailability(avail);
+        // Fetch bookings for each date
+        return Promise.all(weekDates.map(d => api.getBookings(d).then(b => ({ date: d, bookings: b }))));
+      })
+      .then(dayBookings => {
         const map = {};
         dayBookings.forEach(({ date, bookings }) => { map[date] = bookings; });
         setBookingsMap(map);
@@ -142,19 +143,40 @@ export default function WeekView({ selectedEmployee, currentDate }) {
               ? dayBookings.find(b => b.employee_id === selectedEmployee.id)
               : null;
 
-            const booked      = avail?.booked    ?? 0;
-            const free        = avail?.available ?? (50 - booked);
-            const pct         = Math.round((booked / 50) * 100);
+            const weekInCycle = avail?.week_in_cycle ?? null;
+            const designated  = isDesignatedForEmployee(selectedEmployee, date, weekInCycle);
+            const isToday     = date === today;
+
+            // Calculate dynamic availability based on employee type
+            let totalSeats, booked, free, pct;
+            
+            if (selectedEmployee && avail) {
+              if (designated) {
+                // Designated employee: show only regular seats (1-40)
+                booked = avail.regular_booked || 0;
+                free = avail.regular_available || 0;
+                totalSeats = booked + free;
+              } else {
+                // Non-designated employee: show only floater seats (41-50)
+                booked = avail.floater_booked || 0;
+                free = avail.floater_available || 0;
+                totalSeats = booked + free;
+              }
+              pct = totalSeats > 0 ? Math.round((booked / totalSeats) * 100) : 0;
+            } else {
+              // No employee selected: show all seats
+              totalSeats = 50;
+              booked = avail?.booked ?? 0;
+              free = avail?.available ?? (50 - booked);
+              pct = Math.round((booked / 50) * 100);
+            }
+
             const fillClr     = pct > 80 ? '#e05252' : pct > 50 ? '#d97706' : '#2a9d5c';
             const fillGrad    = pct > 80
               ? 'linear-gradient(90deg,#e05252,#c43c3c)'
               : pct > 50
                 ? 'linear-gradient(90deg,#d97706,#b45309)'
                 : 'linear-gradient(90deg,#2a9d5c,#1e7a48)';
-
-            const weekInCycle = avail?.week_in_cycle ?? null;
-            const designated  = isDesignatedForEmployee(selectedEmployee, date, weekInCycle);
-            const isToday     = date === today;
 
             let borderClr = 'var(--border)';
             if (myBooking)       borderClr = 'rgba(244,132,95,0.45)';
@@ -223,6 +245,11 @@ export default function WeekView({ selectedEmployee, currentDate }) {
                     <div className="progress-bar">
                       <div className="progress-fill" style={{ width: `${pct}%`, background: fillGrad }} />
                     </div>
+                    {selectedEmployee && (
+                      <div style={{ fontSize: '9px', color: 'var(--text-dim)', marginTop: 4 }}>
+                        {designated ? `of ${totalSeats} regular` : `of ${totalSeats} floater`}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>—</div>

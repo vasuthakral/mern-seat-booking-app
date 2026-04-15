@@ -17,6 +17,8 @@ export default function SeatGrid({
 
   const myBooking    = bookings.find(b => selectedEmployee && b.employee_id === selectedEmployee.id);
   const isWeekend    = weekInfo?.is_weekend;
+  const isHoliday    = weekInfo?.is_holiday;
+  const holidayName  = weekInfo?.holiday_name;
   const totalBooked  = bookings.length;
   const totalBlocked = seats.filter(s => s.is_blocked).length;
   const totalFree    = 50 - totalBooked - totalBlocked;
@@ -109,19 +111,33 @@ export default function SeatGrid({
       </div>
 
       {/* ── Status banners ─────────────────────────────────── */}
-      {isWeekend && (
+      {isHoliday && (
+        <div className="alert" style={{
+          marginBottom: 14,
+          background: 'linear-gradient(135deg, rgba(244,132,95,0.08) 0%, rgba(244,132,95,0.04) 100%)',
+          border: '1.5px solid rgba(244,132,95,0.3)',
+          color: '#c45a35',
+        }}>
+          <span style={{ fontSize: '20px' }}>🎉</span>
+          <div>
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>{holidayName}</div>
+            <div style={{ fontSize: '12px', opacity: 0.85 }}>It's a public holiday! Office is closed. Enjoy your day off! 🌟</div>
+          </div>
+        </div>
+      )}
+      {isWeekend && !isHoliday && (
         <div className="alert alert-warning" style={{ marginBottom: 14 }}>
           <span>🚫</span>
           <span>Weekend — bookings are not allowed on Saturday or Sunday.</span>
         </div>
       )}
-      {!isWeekend && !selectedEmployee && (
+      {!isWeekend && !isHoliday && !selectedEmployee && (
         <div className="alert alert-info" style={{ marginBottom: 14 }}>
           <span>👤</span>
           <span>Select an employee from the top bar to start booking seats.</span>
         </div>
       )}
-      {!isWeekend && selectedEmployee && !myBooking && (
+      {!isWeekend && !isHoliday && selectedEmployee && !myBooking && (
         <div className={`alert ${isDesignatedDay ? 'alert-success' : 'alert-warning'}`} style={{ marginBottom: 14 }}>
           <span>{isDesignatedDay ? '✓' : '⚡'}</span>
           <span>
@@ -132,7 +148,7 @@ export default function SeatGrid({
           </span>
         </div>
       )}
-      {!isWeekend && selectedEmployee && myBooking && (
+      {!isWeekend && !isHoliday && selectedEmployee && myBooking && (
         <div className="alert alert-info" style={{ marginBottom: 14 }}>
           <span>★</span>
           <span>

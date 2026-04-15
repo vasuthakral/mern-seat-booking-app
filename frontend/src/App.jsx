@@ -86,7 +86,7 @@ function Dashboard() {
   }, [selectedEmployee, refreshMyBookings]);
 
   const designated = isDesignatedDay(selectedEmployee, selectedDate);
-  const canBook    = !!selectedEmployee && !isWeekend(selectedDate);
+  const canBook    = !!selectedEmployee && !isWeekend(selectedDate) && !weekInfo?.is_holiday;
 
   function handleSeatClick(seat) {
     if (!selectedEmployee) { showToast('Please select an employee first.', 'warning'); return; }
@@ -197,6 +197,7 @@ function Dashboard() {
                 bookings={bookings}
                 myBookings={myBookings}
                 availability={availability}
+                seats={seats}
                 weekInfo={weekInfo}
                 canBook={canBook}
                 isDesignatedDay={designated}
